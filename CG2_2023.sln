@@ -1,0 +1,30 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.6.33723.286
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CG2_2023", "CG2_2023.vcxproj", "{67FADDCC-9DDD-4B9B-A9F9-90A3BC783002}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ソリューション項目", "ソリューション項目", "{EDEA24EC-D64B-469E-8EE0-3E4ADAEA438A}"
+	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{67FADDCC-9DDD-4B9B-A9F9-90A3BC783002}.Debug|x64.ActiveCfg = Debug|x64
+		{67FADDCC-9DDD-4B9B-A9F9-90A3BC783002}.Debug|x64.Build.0 = Debug|x64
+		{67FADDCC-9DDD-4B9B-A9F9-90A3BC783002}.Release|x64.ActiveCfg = Release|x64
+		{67FADDCC-9DDD-4B9B-A9F9-90A3BC783002}.Release|x64.Build.0 = Release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {CE101774-B8CC-4678-84C2-2F293DCEE805}
+	EndGlobalSection
+EndGlobal
