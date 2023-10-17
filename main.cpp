@@ -859,6 +859,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	Transform transform{ {1.0f, 1.0f, 1.0f}, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f} };
 	Transform cameraTransform{ {1.0f, 1.0f, 1.0f}, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, -5.0f} };
 
+	Vector4 color = { 1.0f, 0.0f, 0.0f, 1.0f };
+
 	// *****************************************
 
 	MSG msg{};
@@ -887,7 +889,18 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		*wvpData = worldViewProjectionMatrix;
 
 		// 開発用UIの処理。実際に開発用のUIを出す場合はここをゲーム固有の処理に置き換える
-		ImGui::ShowDemoWindow();
+		//ImGui::ShowDemoWindow();
+
+		// ---------------
+		//開発用のUIの処理、実際に開発用のUIを出す場合はここをゲーム固有の処理に置き換える
+		ImGui::Begin("window");
+		ImGui::ColorEdit3("color 1", &color.x);
+		ImGui::SetWindowSize({ 200,100 });
+		ImGui::End();
+		ImGui::Render();
+		*materialData = color;
+		// ----------------
+
 
 		// ImGuiの内部コマンドを生成する
 		ImGui::Render();
