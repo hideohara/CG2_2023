@@ -1346,6 +1346,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		ImGui::Begin("window");
 		ImGui::ColorEdit3("color 1", &color.x);
 		ImGui::Checkbox("useMonsterBall", &useMonsterBall);
+
+		ImGui::DragFloat3("Light", &directionalLightData->direction.x, 0.01f, -100.0f, 100.0f);
+
+
 		ImGui::SetWindowSize({ 200,100 });
 		ImGui::End();
 		ImGui::Render();
