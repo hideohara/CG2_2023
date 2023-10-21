@@ -1411,6 +1411,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		commandList->SetGraphicsRootConstantBufferView(1, wvpResource->GetGPUVirtualAddress());
 		// SRVのDescriptorTableの先頭を設定。2はrootParameter[2]である。
 		commandList->SetGraphicsRootDescriptorTable(2, useMonsterBall ? textureSrvHandleGPU2 : textureSrvHandleGPU);
+		// DirectionalLightのCBufferの場所を設定
+		commandList->SetGraphicsRootConstantBufferView(3, directionalLightResource->GetGPUVirtualAddress());
 		// 描画！（DrawCall/ドローコール）。3頂点で1つのインスタンス。インスタンスについては今後
 		commandList->DrawInstanced(kNumSphereVertices, 1, 0, 0);
 

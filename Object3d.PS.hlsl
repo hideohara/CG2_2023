@@ -1,4 +1,4 @@
-#include "object3d.hlsli"
+#include "Object3d.hlsli"
     
 struct Material
 {
@@ -26,7 +26,16 @@ PixelShaderOutput main(VertexShaderOutput input)
 {
     PixelShaderOutput output;
     float32_t4 textureColor = gTexture.Sample(gSampler, input.texcoord);
-    output.color = gMaterial.color * textureColor;
+    if (gMaterial.enableLighting != 0)
+    { // Lightingする場合
+        float cos = saturate(dot(normalize(input.normal), -gDirectionalLight.direction));
+        output.color = gMaterial.color * textureColor * gDirectionalLight.color * cos * gDirectionalLight.intensity;
+    }
+    else
+    { // Lightingしない場合。前回までと同じ演算
+        output.color = gMaterial.color * textureColor;
+    }
+
     return output;
 }
 
