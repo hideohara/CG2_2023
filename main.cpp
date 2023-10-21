@@ -1315,7 +1315,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		// 指定した深度で画面全体をクリアする
 		commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 
-		// ImG用
+		// ImGui用
 		// 描画用のDescriptorHeapの設定
 		ID3D12DescriptorHeap* descriptorHeaps[] = { srvDescriptorHeap };
 		commandList->SetDescriptorHeaps(1, descriptorHeaps);
