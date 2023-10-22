@@ -21,6 +21,9 @@ extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg
 #pragma comment(lib, "d3d12.lib")
 #pragma comment(lib, "dxgi.lib")
 
+#include <random>
+std::random_device seedGenerator;
+std::mt19937 randomEngine(seedGenerator());
 
 
 struct Vector4 {
@@ -476,7 +479,17 @@ D3D12_GPU_DESCRIPTOR_HANDLE GetGPUDescriptorHandle(ID3D12DescriptorHeap* descrip
 	return handleGPU;
 }
 
-
+// パーティクル生成
+Particle MakeNewParticle(std::mt19937& randomEngine)
+{
+	std::uniform_real_distribution<float> distribution(-1.0f, 1.0f);
+	Particle particle;
+	particle.transform.scale = { 1.0f, 1.0f, 1.0f };
+	particle.transform.rotate = { 0.0f, 0.0f, 0.0f };
+	particle.transform.translate = { distribution(randomEngine), distribution(randomEngine), distribution(randomEngine) };
+	particle.velocity = { distribution(randomEngine), distribution(randomEngine), distribution(randomEngine) };
+	return particle;
+}
 
 // ウィンドウプロシージャ
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
@@ -997,11 +1010,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	//Transform transforms[kNumInstance];
 	Particle particles[kNumInstance];
 	for (uint32_t index = 0; index < kNumInstance; ++index) {
-		particles[index].transform.scale = { 1.0f, 1.0f, 1.0f };
-		particles[index].transform.rotate = { 0.0f, 0.0f, 0.0f };
-		particles[index].transform.translate = { index * 0.1f, index * 0.1f, index * 0.1f };
-		particles[index].velocity = { 0.0f, 1.0f, 0.0f };
+		particles[index] = MakeNewParticle(randomEngine);
 	}
+
 
 	// Δtを定義。とりあえず60fps固定してあるが、実時間を計測して可変fpsで動かせるようにしておくとなお良い
 	const float kDeltaTime = 1.0f / 60.0f;
