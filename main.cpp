@@ -8,6 +8,7 @@
 #include <dxgidebug.h>
 #include <dxcapi.h>
 #include <wrl.h>
+#include <numbers>
 
 
 
@@ -330,6 +331,24 @@ Matrix4x4 MakePerspectiveFovMatrix(float fovY, float aspectRatio, float nearClip
 	};
 }
 
+Matrix4x4 MakeTranslateMatrix(const Vector3& translate) {
+	return {
+	  1.0f, 0.0f, 0.0f, 0.0f,
+	  0.0f, 1.0f, 0.0f, 0.0f,
+	  0.0f, 0.0f, 1.0f, 0.0f,
+	  translate.x, translate.y, translate.z, 1.0f,
+	};
+}
+
+Matrix4x4 MakeScaleMatrix(const Vector3& scale) {
+	return {
+	  scale.x, 0.0f, 0.0f, 0.0f,
+	  0.0f, scale.y, 0.0f, 0.0f,
+	  0.0f, 0.0f, scale.z, 0.0f,
+	  0.0f, 0.0f, 0.0f, 1.0f,
+	};
+}
+
 
 // *****************************
 // 移動で追加
@@ -357,6 +376,9 @@ const Vector3 operator+(const Vector3& v1, const Vector3& v2) {
 	Vector3 temp(v1);
 	return temp += v2;
 }
+
+Matrix4x4 operator*(const Matrix4x4& m1, const Matrix4x4& m2) { return Multiply(m1, m2); }
+
 // *****************************
 
 
@@ -856,7 +878,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	// RasiterzerStateの設定
 	D3D12_RASTERIZER_DESC rasterizerDesc{};
 	// 裏面（時計回り）を表示しない
-	rasterizerDesc.CullMode = D3D12_CULL_MODE_BACK;
+	//rasterizerDesc.CullMode = D3D12_CULL_MODE_BACK;
+	rasterizerDesc.CullMode = D3D12_CULL_MODE_NONE;
 	// 三角形の中を塗りつぶす
 	rasterizerDesc.FillMode = D3D12_FILL_MODE_SOLID;
 
@@ -1018,7 +1041,12 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 	// Transform変数を作る
 	Transform transform{ {1.0f, 1.0f, 1.0f}, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f} };
-	Transform cameraTransform{ {1.0f, 1.0f, 1.0f}, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, -5.0f} };
+	//Transform cameraTransform{ {1.0f, 1.0f, 1.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 15.0f, -10.0f} };
+
+	Transform cameraTransform{
+	{1.0f, 1.0f, 1.0f},
+	{std::numbers::pi_v<float> / 3.0f, std::numbers::pi_v<float>, 0.0f}, {0.0f, 23.0f, 10.0f} };
+
 
 	Vector4 color = { 1.0f, 1.0f, 1.0f, 1.0f };
 
@@ -1035,6 +1063,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	// Δtを定義。とりあえず60fps固定してあるが、実時間を計測して可変fpsで動かせるようにしておくとなお良い
 	const float kDeltaTime = 1.0f / 60.0f;
 
+	bool sUpdate = false;
+	bool sBillboard = true;
 
 	// *****************************************
 
@@ -1052,6 +1082,21 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		ImGui_ImplWin32_NewFrame();
 		ImGui::NewFrame();
 
+		// 開発用UIの処理。実際に開発用のUIを出す場合はここをゲーム固有の処理に置き換える
+		//ImGui::ShowDemoWindow();
+
+		// ---------------
+		//開発用のUIの処理、実際に開発用のUIを出す場合はここをゲーム固有の処理に置き換える
+		ImGui::Begin("window");
+		ImGui::ColorEdit4("color 1", &color.x);
+		ImGui::Checkbox("update", &sUpdate);
+		ImGui::Checkbox("Billboard", &sBillboard);
+		ImGui::SetWindowSize({ 200,100 });
+		ImGui::End();
+		ImGui::Render();
+		*materialData = color;
+		// ----------------
+
 		transform.rotate.y += 0.03f;
 		Matrix4x4 worldMatrix = MakeAffineMatrix(transform.scale, transform.rotate, transform.translate);
 		Matrix4x4 cameraMatrix = MakeAffineMatrix(cameraTransform.scale, cameraTransform.rotate, cameraTransform.translate);
@@ -1062,23 +1107,43 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 		Matrix4x4 viewProjectionMatrix = Multiply(viewMatrix, projectionMatrix);
 
+		Matrix4x4 backToFrontMatrix = MakeRotateYMatrix(std::numbers::pi_v<float>);
+		Matrix4x4 billboardMatrix = MakeIdentity4x4();
+		if (sBillboard) {
+			billboardMatrix = Multiply(backToFrontMatrix, cameraMatrix);
+			billboardMatrix.m[3][0] = 0.0f; // 平行移動成分はいらない
+			billboardMatrix.m[3][1] = 0.0f;
+			billboardMatrix.m[3][2] = 0.0f;
+		}
+
+
 		// WVP等を計算して、Resourceに書き込む。メインループの中で行う
 		uint32_t numInstance = 0;// 描画すべきインスタンス数
-		for (uint32_t index = 0; index < kNumMaxInstance; ++index) {
-			if (particles[index].lifeTime <= particles[index].currentTime) {	// 生存期間を過ぎていたら更新せず描画対象にしない
+		for (uint32_t index2 = 0; index2 < kNumMaxInstance; ++index2) {
+			Particle& particle = particles[index2];
+
+			if (particle.lifeTime <= particle.currentTime) {	// 生存期間を過ぎていたら更新せず描画対象にしない
 				continue;
 			}
 
-			particles[index].transform.translate += particles[index].velocity * kDeltaTime;
-			float alpha = 1.0f - (particles[index].currentTime / particles[index].lifeTime);
-			particles[index].currentTime += kDeltaTime;// 経過時間を足す
+			if (sUpdate) {
+				particle.transform.translate += particle.velocity * kDeltaTime;
+				particle.currentTime += kDeltaTime;// 経過時間を足す
+			}
+			float alpha = 1.0f - (particle.currentTime / particle.lifeTime);
 
-			Matrix4x4 worldMatrix =
-				MakeAffineMatrix(particles[index].transform.scale, particles[index].transform.rotate, particles[index].transform.translate);
+			//Matrix4x4 worldMatrix =
+			//	MakeAffineMatrix(particle.transform.scale, particle.transform.rotate, particle.transform.translate);
+			Matrix4x4 scaleMatrix = MakeScaleMatrix(particle.transform.scale);
+			Matrix4x4 rotateMatrix = MakeRotateXMatrix(particle.transform.rotate.x) * MakeRotateYMatrix(particle.transform.rotate.y) * MakeRotateZMatrix(particle.transform.rotate.z);
+			Matrix4x4 translateMatrix = MakeTranslateMatrix(particle.transform.translate);
+			Matrix4x4 worldMatrix = scaleMatrix * billboardMatrix * translateMatrix;
+
+
 			Matrix4x4 worldViewProjectionMatrix = Multiply(worldMatrix, viewProjectionMatrix);
 			instancingData[numInstance].WVP = worldViewProjectionMatrix;
 			instancingData[numInstance].World = worldMatrix;
-			instancingData[numInstance].color = particles[index].color;
+			instancingData[numInstance].color = particle.color;
 			instancingData[numInstance].color.w = alpha;
 
 
@@ -1087,18 +1152,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 
 
-		// 開発用UIの処理。実際に開発用のUIを出す場合はここをゲーム固有の処理に置き換える
-		//ImGui::ShowDemoWindow();
 
-		// ---------------
-		//開発用のUIの処理、実際に開発用のUIを出す場合はここをゲーム固有の処理に置き換える
-		ImGui::Begin("window");
-		ImGui::ColorEdit4("color 1", &color.x);
-		ImGui::SetWindowSize({ 200,100 });
-		ImGui::End();
-		ImGui::Render();
-		*materialData = color;
-		// ----------------
 
 
 		// ImGuiの内部コマンドを生成する
