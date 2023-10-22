@@ -1,14 +1,25 @@
-struct TransformationMatrix
+//struct TransformationMatrix
+//{
+//    float32_t4x4 WVP;
+//    float32_t4x4 World;
+//};
+
+struct ParticleForGPU
 {
     float32_t4x4 WVP;
     float32_t4x4 World;
+    float32_t4 color;
 };
+
+
 //ConstantBuffer<TransformationMatrix> gTransformationMatrix : register(b0);
-StructuredBuffer<TransformationMatrix> gTransformationMatrices : register(t0);
+//StructuredBuffer<TransformationMatrix> gTransformationMatrices : register(t0);
+StructuredBuffer<ParticleForGPU> gParticle : register(t0);
 
 struct VertexShaderOutput
 {
     float32_t4 position : SV_POSITION;
+    float32_t4 color : COLOR0;
 };
 struct VertexShaderInput
 {
@@ -17,7 +28,9 @@ struct VertexShaderInput
 VertexShaderOutput main(VertexShaderInput input, uint32_t instanceId : SV_InstanceID)
 {
     VertexShaderOutput output;
-    output.position = mul(input.position, gTransformationMatrices[instanceId].WVP);
+    //output.position = mul(input.position, gTransformationMatrices[instanceId].WVP);
+    output.position = mul(input.position, gParticle[instanceId].WVP);
+    output.color = gParticle[instanceId].color;
     return output;
 }
 
