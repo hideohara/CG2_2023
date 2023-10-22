@@ -1017,6 +1017,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		//開発用のUIの処理、実際に開発用のUIを出す場合はここをゲーム固有の処理に置き換える
 		ImGui::Begin("window");
 		ImGui::ColorEdit3("color 1", &color.x);
+		ImGui::SliderFloat3("LightDirection", &directionalLightData->direction.x, -1.0f, 1.0f);
 		ImGui::SetWindowSize({ 200,100 });
 		ImGui::End();
 		ImGui::Render();
