@@ -992,6 +992,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 	Vector4 color = { 1.0f, 0.0f, 0.0f, 1.0f };
 
+
 	// Instancing用に最大数分のTransformを用意し、それぞれ位置が少しずつずれるように初期化する
 	//Transform transforms[kNumInstance];
 	Particle particles[kNumInstance];
