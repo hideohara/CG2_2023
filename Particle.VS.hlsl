@@ -1,3 +1,5 @@
+#include "Particle.hlsli"
+
 struct TransformationMatrix
 {
     float32_t4x4 WVP;
@@ -6,10 +8,10 @@ struct TransformationMatrix
 //ConstantBuffer<TransformationMatrix> gTransformationMatrix : register(b0);
 StructuredBuffer<TransformationMatrix> gTransformationMatrices : register(t0);
 
-struct VertexShaderOutput
-{
-    float32_t4 position : SV_POSITION;
-};
+//struct VertexShaderOutput
+//{
+//    float32_t4 position : SV_POSITION;
+//};
 struct VertexShaderInput
 {
     float32_t4 position : POSITION0;
