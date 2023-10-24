@@ -11,6 +11,7 @@
 #include <wrl.h>
 #include <numbers>
 
+#include <list>
 
 #include "externals/imgui/imgui.h"
 #include "externals/imgui/imgui_impl_dx12.h"
@@ -69,6 +70,14 @@ struct ParticleForGPU {
 	Matrix4x4 World;
 	Vector4 color;
 };
+
+struct Emitter {
+	Transform transform; //!< エミッタのTransform
+	uint32_t count; //!< 発生数
+	float frequency; //!< 発生頻度
+	float frequencyTime; //!< 頻度用時刻
+};
+
 
 // string->wstring
 std::wstring ConvertString(const std::string& str);
@@ -507,13 +516,17 @@ D3D12_GPU_DESCRIPTOR_HANDLE GetGPUDescriptorHandle(ID3D12DescriptorHeap* descrip
 }
 
 // パーティクル生成
-Particle MakeNewParticle(std::mt19937& randomEngine)
+Particle MakeNewParticle(std::mt19937& randomEngine, const Vector3& translate)
 {
 	std::uniform_real_distribution<float> distribution(-1.0f, 1.0f);
 	Particle particle;
 	particle.transform.scale = { 1.0f, 1.0f, 1.0f };
 	particle.transform.rotate = { 0.0f, 0.0f, 0.0f };
-	particle.transform.translate = { distribution(randomEngine), distribution(randomEngine), distribution(randomEngine) };
+
+	//particle.transform.translate = { distribution(randomEngine), distribution(randomEngine), distribution(randomEngine) };
+	Vector3 randomTranslate{ distribution(randomEngine), distribution(randomEngine), distribution(randomEngine) };
+	particle.transform.translate = translate + randomTranslate;
+
 	particle.velocity = { distribution(randomEngine), distribution(randomEngine), distribution(randomEngine) };
 	std::uniform_real_distribution<float> distColor(0.0f, 1.0f);
 	particle.color = { distColor(randomEngine), distColor(randomEngine), distColor(randomEngine), 1.0f };
@@ -522,6 +535,15 @@ Particle MakeNewParticle(std::mt19937& randomEngine)
 	particle.currentTime = 0;
 
 	return particle;
+}
+
+// エミッタ
+std::list<Particle> Emit(const Emitter& emitter, std::mt19937& randomEngine) {
+	std::list<Particle> particles;
+	for (uint32_t count = 0; count < emitter.count; ++count) {
+		particles.push_back(MakeNewParticle(randomEngine, emitter.transform.translate));
+	}
+	return particles;
 }
 
 
@@ -963,7 +985,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	*wvpData = MakeIdentity4x4();
 
 	// Instancing用にTransformationMatrixを10コ格納できるResourceを作る
-	const uint32_t kNumMaxInstance = 10; // インスタンス数
+	const uint32_t kNumMaxInstance = 100; // インスタンス数
 	// Instancing用のTransformationMatrixリソースを作る
 	Microsoft::WRL::ComPtr<ID3D12Resource> instancingResource =
 		CreateBufferResource(device, sizeof(ParticleForGPU) * kNumMaxInstance);
@@ -1033,11 +1055,21 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 	// *****************************************
 
-	// Instancing用に最大数分のTransformを用意し、それぞれ位置が少しずつずれるように初期化する
-	Particle particles[kNumMaxInstance];
-	for (uint32_t index = 0; index < kNumMaxInstance; ++index) {
-		particles[index] = MakeNewParticle(randomEngine);
-	}
+	// emitterとInstancing発生
+
+	Emitter emitter{};
+	emitter.count = 3;
+	emitter.frequency = 0.5f;// 0.5秒ごとに発生
+	emitter.frequencyTime = 0.0f;// 発生頻度用の時刻、0で初期化
+	emitter.transform.translate = { 0.0f, 0.0f, 0.0f };
+	emitter.transform.rotate = { 0.0f, 0.0f, 0.0f };
+	emitter.transform.scale = { 1.0f, 1.0f, 1.0f };
+
+	std::list<Particle> particles;
+	particles.splice(particles.end(), Emit(emitter, randomEngine));
+
+
+
 
 
 	// Δtを定義。とりあえず60fps固定してあるが、実時間を計測して可変fpsで動かせるようにしておくとなお良い
@@ -1082,7 +1114,19 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		ImGui::ColorEdit4("color 1", &color.x);
 		ImGui::Checkbox("update", &sUpdate);
 		ImGui::Checkbox("billboard", &sBillboard);
-		ImGui::SetWindowSize({ 200,100 });
+		ImGui::DragFloat3("EmitterTranslate", &emitter.transform.translate.x, 0.01f, -100.0f, 100.0f);
+
+		//if (ImGui::Button("Add Particle")) {
+		//	particles.push_back(MakeNewParticle(randomEngine));
+		//	particles.push_back(MakeNewParticle(randomEngine));
+		//	particles.push_back(MakeNewParticle(randomEngine));
+		//}
+		if (ImGui::Button("Add Particle")) {
+			particles.splice(particles.end(), Emit(emitter, randomEngine));
+		}
+
+
+		ImGui::SetWindowSize({ 200,200 });
 		ImGui::End();
 		ImGui::Render();
 		*materialData = color;
@@ -1120,37 +1164,57 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			billboardMatrix.m[3][2] = 0.0f;
 		}
 
+		// エミッタから発生
+		if (sUpdate) {
+			emitter.frequencyTime += kDeltaTime;// 時刻を進める
+			if (emitter.frequency <= emitter.frequencyTime) {// 頻度より大きいなら発生
+				particles.splice(particles.end(), Emit(emitter, randomEngine));// 発生処理
+				emitter.frequencyTime -= emitter.frequency;// 余計に過ぎた時間も加味して頻度計算する
+			}
+		}
+
 		// WVP等を計算して、Resourceに書き込む。メインループの中で行う
 		uint32_t numInstance = 0;// 描画すべきインスタンス数
-		for (uint32_t index = 0; index < kNumMaxInstance; ++index) {
-			Particle& particle = particles[index];
+		//for (uint32_t index = 0; index < kNumMaxInstance; ++index) {
+		for (std::list<Particle>::iterator particleIterator = particles.begin();
+			particleIterator != particles.end(); ) { // 諸々の処理 }
 
-			if (particle.lifeTime <= particle.currentTime) { // 生存期間を過ぎていたら更新せず描画対象にしない
+			// Particle& particle = particles[index];
+
+			//if ((*particleIterator).lifeTime <= (*particleIterator).currentTime) { // 生存期間を過ぎていたら更新せず描画対象にしない
+			//	continue;
+			//}
+			if ((*particleIterator).lifeTime <= (*particleIterator).currentTime) {
+				particleIterator = particles.erase(particleIterator); // 生存期間が過ぎたParticleはlistから消す。戻り値が次のイテレータとなる
 				continue;
 			}
 
 			if (sUpdate) {
-				particle.transform.translate += particle.velocity * kDeltaTime;
-				particle.currentTime += kDeltaTime;// 経過時間を足す
+				(*particleIterator).transform.translate += (*particleIterator).velocity * kDeltaTime;
+				(*particleIterator).currentTime += kDeltaTime;// 経過時間を足す
 			}
 
-			float alpha = 1.0f - (particle.currentTime / particle.lifeTime);
+			float alpha = 1.0f - ((*particleIterator).currentTime / (*particleIterator).lifeTime);
 
 			//Matrix4x4 worldMatrix =
 			//	MakeAffineMatrix(particle.transform.scale, particle.transform.rotate, particle.transform.translate);
 
-			Matrix4x4 scaleMatrix = MakeScaleMatrix(particle.transform.scale);
-			Matrix4x4 rotateMatrix = MakeRotateXMatrix(particle.transform.rotate.x) * MakeRotateYMatrix(particle.transform.rotate.y) * MakeRotateZMatrix(particle.transform.rotate.z);
-			Matrix4x4 translateMatrix = MakeTranslateMatrix(particle.transform.translate);
+			Matrix4x4 scaleMatrix = MakeScaleMatrix((*particleIterator).transform.scale);
+			Matrix4x4 rotateMatrix = MakeRotateXMatrix((*particleIterator).transform.rotate.x) * MakeRotateYMatrix((*particleIterator).transform.rotate.y) * MakeRotateZMatrix((*particleIterator).transform.rotate.z);
+			Matrix4x4 translateMatrix = MakeTranslateMatrix((*particleIterator).transform.translate);
 			Matrix4x4 worldMatrix = scaleMatrix * billboardMatrix * translateMatrix;
 
 
 			Matrix4x4 worldViewProjectionMatrix = Multiply(worldMatrix, viewProjectionMatrix);
-			instancingData[numInstance].WVP = worldViewProjectionMatrix;
-			instancingData[numInstance].World = worldMatrix;
-			instancingData[numInstance].color = particle.color;
-			instancingData[numInstance].color.w = alpha;
-			++numInstance; // 生きているParticleの数を1つカウントする
+
+			if (numInstance < kNumMaxInstance) {
+				instancingData[numInstance].WVP = worldViewProjectionMatrix;
+				instancingData[numInstance].World = worldMatrix;
+				instancingData[numInstance].color = (*particleIterator).color;
+				instancingData[numInstance].color.w = alpha;
+				++numInstance; // 生きているParticleの数を1つカウントする
+			}
+			++particleIterator;
 		}
 
 
