@@ -1088,6 +1088,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	bool sUpdate = false;
 	bool sBillboard = false;
 
+	Vector3 acceleration = { 0,0,0 };
+
 	// *****************************************
 
 	MSG msg{};
@@ -1115,6 +1117,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		ImGui::Checkbox("update", &sUpdate);
 		ImGui::Checkbox("billboard", &sBillboard);
 		ImGui::DragFloat3("EmitterTranslate", &emitter.transform.translate.x, 0.01f, -100.0f, 100.0f);
+		ImGui::DragFloat3("acceleration", &acceleration.x, 0.01f, -100.0f, 100.0f);
 
 		//if (ImGui::Button("Add Particle")) {
 		//	particles.push_back(MakeNewParticle(randomEngine));
@@ -1191,6 +1194,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 			if (sUpdate) {
 				(*particleIterator).transform.translate += (*particleIterator).velocity * kDeltaTime;
+				(*particleIterator).transform.translate += acceleration * kDeltaTime;
 				(*particleIterator).currentTime += kDeltaTime;// 経過時間を足す
 			}
 
