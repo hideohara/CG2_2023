@@ -1021,15 +1021,13 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	// Δtを定義。とりあえず60fps固定してあるが、実時間を計測して可変fpsで動かせるようにしておくとなお良い
 	const float kDeltaTime = 1.0f / 60.0f;
 
-
-
 	// Transform変数を作る
 	Transform transform{ {1.0f, 1.0f, 1.0f}, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f} };
 	Transform cameraTransform{ {1.0f, 1.0f, 1.0f}, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, -10.0f} };
 
 	Vector4 color = { 1.0f, 1.0f, 1.0f, 1.0f };
 
-
+	bool sUpdate = false;
 
 	// *****************************************
 
@@ -1047,6 +1045,24 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		ImGui_ImplDX12_NewFrame();
 		ImGui_ImplWin32_NewFrame();
 		ImGui::NewFrame();
+
+		// 開発用UIの処理。実際に開発用のUIを出す場合はここをゲーム固有の処理に置き換える
+		//ImGui::ShowDemoWindow();
+
+		// ---------------
+		//開発用のUIの処理、実際に開発用のUIを出す場合はここをゲーム固有の処理に置き換える
+		ImGui::Begin("window");
+		ImGui::ColorEdit4("color 1", &color.x);
+		ImGui::Checkbox("update", &sUpdate);
+		ImGui::SetWindowSize({ 200,100 });
+		ImGui::End();
+		ImGui::Render();
+		*materialData = color;
+		// ----------------
+
+
+		// ImGuiの内部コマンドを生成する
+		ImGui::Render();
 
 
 
@@ -1067,8 +1083,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 				continue;
 			}
 
-			particles[index].transform.translate += particles[index].velocity * kDeltaTime;
-			particles[index].currentTime += kDeltaTime;// 経過時間を足す
+			if (sUpdate) {
+				particles[index].transform.translate += particles[index].velocity * kDeltaTime;
+				particles[index].currentTime += kDeltaTime;// 経過時間を足す
+			}
+
 			float alpha = 1.0f - (particles[index].currentTime / particles[index].lifeTime);
 
 			Matrix4x4 worldMatrix =
@@ -1082,23 +1101,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		}
 
 
-
-		// 開発用UIの処理。実際に開発用のUIを出す場合はここをゲーム固有の処理に置き換える
-		//ImGui::ShowDemoWindow();
-
-		// ---------------
-		//開発用のUIの処理、実際に開発用のUIを出す場合はここをゲーム固有の処理に置き換える
-		ImGui::Begin("window");
-		ImGui::ColorEdit4("color 1", &color.x);
-		ImGui::SetWindowSize({ 200,100 });
-		ImGui::End();
-		ImGui::Render();
-		*materialData = color;
-		// ----------------
-
-
-		// ImGuiの内部コマンドを生成する
-		ImGui::Render();
 
 
 		// これから書き込むバックバッファのインデックスを取得
