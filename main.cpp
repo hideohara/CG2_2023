@@ -929,7 +929,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	// マテリアルにデータを書き込む
 	DirectionalLight* directionalLightData = nullptr;
 	// 書き込むためのアドレスを取得
-	materialResource->Map(0, nullptr, reinterpret_cast<void**>(&directionalLightData));
+	directionalLightResource->Map(0, nullptr, reinterpret_cast<void**>(&directionalLightData));
 	// デフォルト値はとりあえず以下のようにしておく
 	directionalLightData->color = { 1.0f, 1.0f, 1.0f, 1.0f };
 	directionalLightData->direction = { 0.0f, -1.0f, 0.0f };
