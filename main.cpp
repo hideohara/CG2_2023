@@ -54,6 +54,11 @@ struct VertexData {
 	Vector3 normal;
 };
 
+struct Material {
+	Vector4 color;
+	int32_t enableLighting;
+};
+
 // string->wstring
 std::wstring ConvertString(const std::string& str);
 // wstring->string
@@ -871,13 +876,15 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	}
 
 	// マテリアル用のリソースを作る。今回はcolor1つ分のサイズを用意する
-	ID3D12Resource* materialResource = CreateBufferResource(device, sizeof(Vector4));
+	ID3D12Resource* materialResource = CreateBufferResource(device, sizeof(Material));
 	// マテリアルにデータを書き込む
-	Vector4* materialData = nullptr;
+	Material* materialData = nullptr;
 	// 書き込むためのアドレスを取得
 	materialResource->Map(0, nullptr, reinterpret_cast<void**>(&materialData));
 	// 今回は赤を書き込んでみる
-	*materialData = Vector4(1.0f, 0.0f, 0.0f, 1.0f);
+	materialData->color = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
+	materialData->enableLighting = true;
+
 
 	// WVP用のリソースを作る。Matrix4x4 1つ分のサイズを用意する
 	ID3D12Resource* wvpResource = CreateBufferResource(device, sizeof(Matrix4x4));
@@ -887,7 +894,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	wvpResource->Map(0, nullptr, reinterpret_cast<void**>(&wvpData));
 	// 単位行列を書きこんでおく
 	*wvpData = MakeIdentity4x4();
-
 
 
 	// ビューポート
@@ -972,7 +978,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		ImGui::SetWindowSize({ 200,100 });
 		ImGui::End();
 		ImGui::Render();
-		*materialData = color;
+		//*materialData = color;
+		materialData->color = color;
 		// ----------------
 
 
