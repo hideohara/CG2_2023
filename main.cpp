@@ -59,6 +59,12 @@ struct Material {
 	int32_t enableLighting;
 };
 
+struct TransformationMatrix {
+	Matrix4x4 WVP;
+	Matrix4x4 World;
+};
+
+
 // string->wstring
 std::wstring ConvertString(const std::string& str);
 // wstring->string
@@ -887,13 +893,15 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 
 	// WVP用のリソースを作る。Matrix4x4 1つ分のサイズを用意する
-	ID3D12Resource* wvpResource = CreateBufferResource(device, sizeof(Matrix4x4));
+	ID3D12Resource* wvpResource = CreateBufferResource(device, sizeof(TransformationMatrix));
 	// データを書き込む
-	Matrix4x4* wvpData = nullptr;
+	TransformationMatrix* wvpData = nullptr;
 	// 書き込むためのアドレスを取得
 	wvpResource->Map(0, nullptr, reinterpret_cast<void**>(&wvpData));
 	// 単位行列を書きこんでおく
-	*wvpData = MakeIdentity4x4();
+	wvpData->WVP = MakeIdentity4x4();
+	wvpData->World = MakeIdentity4x4();
+
 
 
 	// ビューポート
@@ -966,7 +974,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		Matrix4x4 viewMatrix = Inverse(cameraMatrix);
 		Matrix4x4 projectionMatrix = MakePerspectiveFovMatrix(0.45f, float(kClientWidth) / float(kClientHeight), 0.1f, 100.0f);
 		Matrix4x4 worldViewProjectionMatrix = Multiply(worldMatrix, Multiply(viewMatrix, projectionMatrix));
-		*wvpData = worldViewProjectionMatrix;
+		wvpData->WVP = worldViewProjectionMatrix;
+		wvpData->World = worldMatrix;
 
 		// 開発用UIの処理。実際に開発用のUIを出す場合はここをゲーム固有の処理に置き換える
 		//ImGui::ShowDemoWindow();
