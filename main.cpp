@@ -70,6 +70,10 @@ struct DirectionalLight {
 	float intensity; //!< 輝度
 };
 
+struct CameraForGPU {
+	Vector3 worldPosition;
+};
+
 // string->wstring
 std::wstring ConvertString(const std::string& str);
 // wstring->string
@@ -709,7 +713,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	descriptionRootSignature.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
 
 	// RootParameter作成。PixelShaderのMaterialとVertexShaderのTransform
-	D3D12_ROOT_PARAMETER rootParameters[4] = {};
+	D3D12_ROOT_PARAMETER rootParameters[5] = {};
 	rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;    // CBVを使う
 	rootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;   // PixelShaderで使う
 	rootParameters[0].Descriptor.ShaderRegister = 0;    // レジスタ番号0を使う
@@ -732,6 +736,12 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	rootParameters[3].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;    // CBVを使う
 	rootParameters[3].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;   // PixelShdaderで使う
 	rootParameters[3].Descriptor.ShaderRegister = 1;    // レジスタ番号1を使う
+
+	rootParameters[4].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;    // CBVを使う
+	rootParameters[4].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;   // PixelShdaderで使う
+	rootParameters[4].Descriptor.ShaderRegister = 2;    // レジスタ番号２を使う
+
+
 	descriptionRootSignature.pParameters = rootParameters;  // ルートパラメータ配列へのポインタ
 	descriptionRootSignature.NumParameters = _countof(rootParameters);  // 配列の長さ
 
@@ -935,7 +945,13 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	directionalLightData->direction = { 0.0f, -1.0f, 0.0f };
 	directionalLightData->intensity = 1.0f;
 
-
+	// カメラ用のリソースを作る。
+	ID3D12Resource* cameraResource = CreateBufferResource(device, sizeof(CameraForGPU));
+	// マテリアルにデータを書き込む
+	CameraForGPU* cameraData = nullptr;
+	// 書き込むためのアドレスを取得
+	cameraResource->Map(0, nullptr, reinterpret_cast<void**>(&cameraData));
+	cameraData->worldPosition = { 0.0f, 0.0f, -5.0f };
 
 
 	// ビューポート
@@ -1086,6 +1102,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		// DirectionalLightのCBufferの場所を設定
 		commandList->SetGraphicsRootConstantBufferView(3, directionalLightResource->GetGPUVirtualAddress());
 
+		// cameraのCBufferの場所を設定
+		commandList->SetGraphicsRootConstantBufferView(4, cameraResource->GetGPUVirtualAddress());
+
 		// 描画！（DrawCall/ドローコール）。3頂点で1つのインスタンス。インスタンスについては今後
 		commandList->DrawInstanced(kNumSphereVertices, 1, 0, 0);
 
@@ -1144,6 +1163,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 	CloseHandle(fenceEvent);
 
+	cameraResource->Release();
 	directionalLightResource->Release();
 	wvpResource->Release();
 	materialResource->Release();
