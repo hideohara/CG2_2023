@@ -1029,7 +1029,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		directionalLightData->direction = light;
 		// ----------------
 
-
 		// ImGuiの内部コマンドを生成する
 		ImGui::Render();
 
