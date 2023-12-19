@@ -57,6 +57,7 @@ struct VertexData {
 struct Material {
 	Vector4 color;
 	int32_t enableLighting;
+	float shininess;
 };
 
 struct TransformationMatrix {
@@ -921,6 +922,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	// 今回は赤を書き込んでみる
 	materialData->color = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
 	materialData->enableLighting = true;
+	materialData->shininess = 70;
 
 
 	// WVP用のリソースを作る。Matrix4x4 1つ分のサイズを用意する
