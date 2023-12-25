@@ -951,8 +951,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	CameraForGPU* cameraData = nullptr;
 	// 書き込むためのアドレスを取得
 	cameraResource->Map(0, nullptr, reinterpret_cast<void**>(&cameraData));
-	// デフォルト値はとりあえず以下のようにしておく
-	cameraData->worldPosition = { 1.0f, 0.0f, -1.0f };
+	// 値はカメラと同じにする
+	cameraData->worldPosition = { 0.0f, 0.0f, -5.0f };
 
 	// ビューポート
 	D3D12_VIEWPORT viewport{};
@@ -998,6 +998,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	Transform cameraTransform{ {1.0f, 1.0f, 1.0f}, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, -5.0f} };
 
 	Vector4 color = { 1.0f, 0.0f, 0.0f, 1.0f };
+	Vector3 light = { 0.0f, -1.0f, 0.0f };
 
 	// *****************************************
 
@@ -1034,11 +1035,13 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		//開発用のUIの処理、実際に開発用のUIを出す場合はここをゲーム固有の処理に置き換える
 		ImGui::Begin("window");
 		ImGui::ColorEdit3("color 1", &color.x);
+		ImGui::DragFloat3("light", &light.x, 0.01f, -1.0f, 1.0f);
 		ImGui::SetWindowSize({ 200,100 });
 		ImGui::End();
 		ImGui::Render();
 		//*materialData = color;
 		materialData->color = color;
+		directionalLightData->direction = light;
 		// ----------------
 
 
